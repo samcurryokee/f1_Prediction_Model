@@ -220,4 +220,4 @@ This is the file to hand to a dashboard (e.g. Lovable). Its top-level keys:
 
 - Race data: [FastF1](https://github.com/theOehrly/Fast-F1) and the [Jolpica-F1](https://github.com/jolpica/jolpica-f1) API (successor to Ergast).
 - Model: [XGBoost](https://xgboost.readthedocs.io/).
-- Based on / inspired by: **[add the original tutorial or author here, if this notebook was adapted from one]**.
+- Based on / inspired by: **[@Mar_antaya and the build club where i got the base model and insights from]**.
