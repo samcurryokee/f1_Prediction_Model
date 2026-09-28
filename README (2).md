@@ -39,7 +39,6 @@ flowchart LR
 4. **Training**: XGBoost learns "does this driver win?" from every historical driver-race.
 5. **Testing**: held-out 2025 season, then walk-forward testing (2022-2025) against baselines.
 6. **Prediction**: a final model trained on every completed race ranks the Baku field.
-7. **Project Link**: The interface displaying the results in lovable  https://f1-dash-glory.lovable.app
 
 ## Features
 
@@ -62,6 +61,8 @@ Eight optional features are computed but **off by default**, and the notebook in
 | `driver_season_share`, `team_season_share` | Share of all championship points scored so far this season |
 | `driver_same_{street,corners,power}_finish_5` | The driver's average finish over the last 5 starts on circuits **like the target one** |
 | `team_same_{street,corners,power}_points_5` | The team's average points over the last 5 races on circuits like the target one |
+| `driver_dnf_rate_5`, `team_dnf_rate_5` | Share of the driver's (or team's) last 5 starts that ended in a retirement, from Ergast's per-driver `status` field. A five-race average finish can hide a "podium or retirement" pattern; this surfaces it directly |
+| `grid_position` | Not a rolling average -- the driver's **real qualifying result for the target race itself**, fetched automatically once qualifying is done (Section 6b) |
 
 "Like the target one" uses three circuit tags:
 
@@ -70,6 +71,8 @@ Eight optional features are computed but **off by default**, and the notebook in
 | `street` | street / permanent | hand-labelled in the notebook (editable) |
 | `corners` | fast corners / slow technical / mixed | hand-labelled in the notebook (editable) |
 | `power` | high / medium / low | **measured** from lap telemetry (see below) |
+
+Every optional group gets its own ablation test, for both the win model and the points-finisher model, so you can see which clues actually earn their place before turning them on.
 
 There is also a **"who excels where?"** table that compares each driver with their teammate on each type of circuit, which separates driver skill from car performance.
 
@@ -116,6 +119,18 @@ jupyter notebook Baku_ML_Prediction_Model.ipynb
 The first run downloads results season by season and caches them in `baku_cache/`, so later runs are fast.
 
 > **macOS note:** if `import xgboost` fails with *"libxgboost.dylib could not be loaded"*, install the OpenMP runtime with `brew install libomp`, then restart the Jupyter kernel.
+
+## Using real qualifying results (Section 6b)
+
+Everything above only uses pre-qualifying information. Once a race's qualifying session is over, re-run the notebook and Section 6b fetches the real grid positions from Ergast and produces a second, qualifying-informed prediction for both models (win and points-finisher), alongside the original pre-qualifying ones -- the pre-qualifying predictions are never overwritten.
+
+If qualifying hasn't been classified yet, this section fills in blanks and says so, rather than failing. You can also supply your own grid instead of (or before) Ergast has it, by adding a `<circuit_id>_qualifying.csv` next to the notebook:
+
+```csv
+driverId,grid_position
+max_verstappen,1
+norris,2
+```
 
 ## Predicted points finishers (top 10)
 
@@ -164,6 +179,7 @@ Everything is written to `baku_outputs/`:
 | `baku_points_model.json` | Trained points-finisher model (portable format) |
 | `baku_model.joblib` | Both trained models, with feature list and metadata (Python) |
 | `baku_model_metadata.json` | Feature list and run metadata |
+| `baku_predictions_grid.csv` / `baku_points_predictions_grid.csv` | The same two predictions, using real qualifying results (Section 6b) |
 | `Baku_XGBoost_Dashboard_Data.json` | Both models + inputs + predictions + reference test cases, for a dashboard or API to consume (see below) |
 | `requirements.txt` | Exact library versions used for the run |
 
@@ -177,7 +193,11 @@ This is the file to hand to a dashboard (e.g. Lovable). Its top-level keys:
 | `points_model` | The points-finisher model, same format |
 | `predictions` (inside `metadata`) | Full field ranked by win score |
 | `points_predictions` | Predicted top-10 finishers, with predicted position and points |
+| `grid_predictions` / `grid_points_predictions` | Same two predictions, but using real qualifying results (`grid_position` may be `null` if qualifying isn't in yet) |
+| `qualifying_source` | Where the grid data came from: Ergast, a user-supplied CSV, or "Not available" |
+| `win_model_grid` / `points_model_grid` | The qualifying-informed models, same portable format |
 | `inputs` | The exact feature values used for each driver in this run |
+| `inputs_grid` | Same, plus each driver's real grid position |
 | `metadata.evaluation` | Accuracy metrics for both models — winner accuracy, walk-forward results, and `points_model` (precision@10, log loss, Brier score, plus the random-guess reference) |
 | `verification` | Reference cases (inputs + expected scores) so you can check a JS reimplementation reproduces the **win model's** exact numbers. Points-model reference cases aren't included yet |
 | `model` | Same as `win_model`, kept only so older code that expects a `model` key still works |
@@ -221,3 +241,7 @@ This is the file to hand to a dashboard (e.g. Lovable). Its top-level keys:
 - Race data: [FastF1](https://github.com/theOehrly/Fast-F1) and the [Jolpica-F1](https://github.com/jolpica/jolpica-f1) API (successor to Ergast).
 - Model: [XGBoost](https://xgboost.readthedocs.io/).
 - Based on / inspired by: **[add the original tutorial or author here, if this notebook was adapted from one]**.
+
+## Author
+
+**Sammy Kariuki Kimani**: [GitHub](https://github.com/samcurryokee)
